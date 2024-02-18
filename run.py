@@ -1,3 +1,4 @@
+import time
 import argparse
 import cv2
 import numpy as np
@@ -73,7 +74,16 @@ if __name__ == '__main__':
         image = torch.from_numpy(image).unsqueeze(0).to(DEVICE)
         
         with torch.no_grad():
+            # Record all the network times
+            # Synchronize the cuda device to make sure the time is accurate
+            torch.cuda.synchronize()
+            st = time.time()
+
             depth = depth_anything(image)
+
+            torch.cuda.synchronize()
+            et = time.time()
+            print(f'network time for processing a image of size {h} x {w} is {et-st}')
         
         depth = F.interpolate(depth[None], (h, w), mode='bilinear', align_corners=False)[0, 0]
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
