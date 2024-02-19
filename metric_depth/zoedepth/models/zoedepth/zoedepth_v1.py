@@ -250,6 +250,7 @@ class ZoeDepth(DepthModel):
         # core = MidasCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
         #                        train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
         
+        # TODO: comment, this will invoke `metric_depth/zoedepth/models/base_models/depth_anything.py: build()`
         core = DepthAnythingCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
                                        train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
         

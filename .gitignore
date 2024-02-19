@@ -44,7 +44,11 @@ checkpoints
 condaenv*
 *.hdr
 
+# Intermidiate outputs
 data
+metric_depth/wandb
+metric_depth/depth_anything_finetune/
+!metric_depth/zoedepth/data
 *.egg-info
 
 imgui.ini

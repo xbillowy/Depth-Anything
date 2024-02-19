@@ -33,7 +33,8 @@ import platform
 
 ROOT = pathlib.Path(__file__).parent.parent.resolve()
 
-HOME_DIR = os.path.expanduser("./data")
+# TODO: modified, to finetune the metric model inside the `metric_depth` directory
+HOME_DIR = os.path.expanduser("../data")
 
 COMMON_CONFIG = {
     "save_dir": os.path.expanduser("./depth_anything_finetune"),
@@ -227,6 +228,35 @@ DATASETS_CONFIG = {
         "min_depth": 1e-3,
         "max_depth": 80,
     },
+    # TODO: add, EasyVolcap format dataset sample configuration
+    "easyvolcap": {
+        "dataset": "easyvolcap",
+        "data_root": os.path.join(HOME_DIR, "synthetic_room/room_412/thuman2_actor1/"),
+        "intri_file": "intri.yml",
+        "extri_file": "extri.yml",
+        "images_dir": "images",
+        "depths_dir": "depths",
+        "cameras_dir": "cameras",  # only when the camera is moving through time
+        "masks_dir": "masks",
+        "ims_pattern": "{frame:06d}.jpg",
+        "view_sample": [0, None, 1],
+        "frame_sample": [0, None, 1],
+        "use_masks": False,
+        "use_depths": True,
+        "dist_mask": [1, 1, 1, 1, 1],
+        "ratio": 1.0,
+        "imsize_overwrite": [-1, -1],
+        "center_crop_size": [-1, -1],
+        "split": "train",
+        "dist_opt_K": False,
+        "encode_ext": ".jpg",
+        # The depth range, may be used for model?
+        # It seems that the depth range is not used in the model, only for metric evaluation?
+        "min_depth_eval": 1e-3,
+        "max_depth_eval": 12,
+        "min_depth": 1e-3,
+        "max_depth": 12,
+    },
 }
 
 ALL_INDOOR = ["nyu", "ibims", "sunrgbd", "diode_indoor", "hypersim_test"]
@@ -235,7 +265,8 @@ ALL_EVAL_DATASETS = ALL_INDOOR + ALL_OUTDOOR
 
 COMMON_TRAINING_CONFIG = {
     "dataset": "nyu",
-    "distributed": True,
+    # TODO: modified, use single GPU for training as default
+    "distributed": False,
     "workers": 16,
     "clip_grad": 0.1,
     "use_shared_dict": False,
@@ -375,7 +406,8 @@ def get_config(model_name, mode='train', dataset=None, **overwrite_kwargs):
     check_choices("Model", model_name, ["zoedepth", "zoedepth_nk"])
     check_choices("Mode", mode, ["train", "infer", "eval"])
     if mode == "train":
-        check_choices("Dataset", dataset, ["nyu", "kitti", "mix", None])
+        # TODO: modified, add EasyVolcap format dataset choice
+        check_choices("Dataset", dataset, ["nyu", "kitti", "mix", "easyvolcap", None])
 
     config = flatten({**COMMON_CONFIG, **COMMON_TRAINING_CONFIG})
     config = update_model_config(config, mode, model_name)
