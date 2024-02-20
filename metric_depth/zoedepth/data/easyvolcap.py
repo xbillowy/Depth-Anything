@@ -17,6 +17,7 @@ from easyvolcap.utils.data_utils import DataSplit, UnstructuredTensors, load_res
 
 class EasyVolcap(Dataset):
     def __init__(self, config):
+        self.dataset = config.dataset
         # Get the paths to the data, modify them in the config file `metric_depth/zoedepth/utils/config.py`
         self.data_root = config.data_root
         self.intri_file = config.intri_file
@@ -275,16 +276,33 @@ class EasyVolcap(Dataset):
         return rgb, msk, wet, dpt
 
     def __getitem__(self, idx):
-        view_index, latent_index, camera_index, frame_index = self.get_indices(idx)
+        data = dict()
+        data['dataset'] = self.dataset
 
+        # Load the indices
+        view_index, latent_index, camera_index, frame_index = self.get_indices(idx)
+        data['view_index'], data['latent_index'], data['camera_index'], data['frame_index'] = view_index, latent_index, camera_index, frame_index
+
+        # Load the camera parameters
+        w2c = self.w2cs[view_index, latent_index]  # 3, 4
+        c2w = self.c2ws[view_index, latent_index]  # 3, 4
+        ixt = self.Ks[view_index, latent_index]  # 3, 3
+        data['w2c'], data['c2w'], data['ixt'] = w2c, c2w, ixt
+        data['H'], data['W'] = self.Hs[view_index, latent_index], self.Ws[view_index, latent_index]
+
+        # Load the rgb image, depth and mask
         rgb, msk, _, dpt = self.get_image(view_index, latent_index)
         # Deal with the order of the channels
         rgb = rgb.permute(2, 0, 1)  # 3, H, W
         msk = msk.permute(2, 0, 1)  # 1, H, W
         dpt = dpt.permute(2, 0, 1)  # 1, H, W
-        rgb_path, dpt_path = self.ims[view_index, frame_index], self.dps[view_index, frame_index]
+        data['image'], data['depth'], data['mask'] = rgb, dpt, msk
 
-        return dict(image=rgb, depth=dpt, mask=msk, image_path=rgb_path, depth_path=dpt_path, dataset='easyvolcap')
+        # Record the paths?
+        rgb_path, dpt_path = self.ims[view_index, latent_index], self.dps[view_index, latent_index]
+        data['image_path'], data['depth_path'] = rgb_path, dpt_path
+
+        return data
 
     def __len__(self):
         return self.n_views * self.n_latents  # there's no notion of epoch here
@@ -292,7 +310,7 @@ class EasyVolcap(Dataset):
 
 def get_easyvolcap_loader(config, batch_size=1, mode='train', **kwargs):
     # FIXME: find a better way to handle EasyVolcap test dataset
-    if mode == 'online_eval':
+    if mode == 'online_eval' and 'test' not in config.dataset:
         config.split = 'test'
         config.view_sample = [0, None, 660]
         config.frame_sample = [0, None, 1]

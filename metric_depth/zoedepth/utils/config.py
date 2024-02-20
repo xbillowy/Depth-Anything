@@ -231,6 +231,7 @@ DATASETS_CONFIG = {
     # TODO: add, EasyVolcap format dataset sample configuration
     "easyvolcap": {
         "dataset": "easyvolcap",
+        "split": "train",
         "data_root": os.path.join(HOME_DIR, "synthetic_room/room_412/thuman2_actor1/"),
         "intri_file": "intri.yml",
         "extri_file": "extri.yml",
@@ -247,7 +248,6 @@ DATASETS_CONFIG = {
         "ratio": 1.0,
         "imsize_overwrite": [-1, -1],
         "center_crop_size": [-1, -1],
-        "split": "train",
         "dist_opt_K": False,
         "encode_ext": ".jpg",
         # The depth range, may be used for model?
@@ -256,6 +256,40 @@ DATASETS_CONFIG = {
         "max_depth_eval": 12,
         "min_depth": 1e-3,
         "max_depth": 12,
+        "eigen_crop": False,
+        "garg_crop": False,
+        "result_dir": "result/synthetic_room/room_412/thuman2_actor1/",
+    },
+    "easyvolcap_test": {
+        "dataset": "easyvolcap_test",
+        "split": "test",
+        "data_root": os.path.join(HOME_DIR, "synthetic_room/room_412/real_actor1/"),
+        "intri_file": "intri.yml",
+        "extri_file": "extri.yml",
+        "images_dir": "images",
+        "depths_dir": "depths",
+        "cameras_dir": "cameras",  # only when the camera is moving through time
+        "masks_dir": "masks",
+        "ims_pattern": "{frame:06d}.jpg",
+        "view_sample": [0, 3, 1],
+        "frame_sample": [0, None, 1],
+        "use_masks": False,
+        "use_depths": True,
+        "dist_mask": [1, 1, 1, 1, 1],
+        "ratio": 1.0,
+        "imsize_overwrite": [-1, -1],
+        "center_crop_size": [-1, -1],
+        "dist_opt_K": False,
+        "encode_ext": ".jpg",
+        # The depth range, may be used for model?
+        # It seems that the depth range is not used in the model, only for metric evaluation?
+        "min_depth_eval": 1e-3,
+        "max_depth_eval": 12,
+        "min_depth": 1e-3,
+        "max_depth": 12,
+        "eigen_crop": False,
+        "garg_crop": False,
+        "result_dir": "result/synthetic_room/room_412/real_actor1/",
     },
 }
 
