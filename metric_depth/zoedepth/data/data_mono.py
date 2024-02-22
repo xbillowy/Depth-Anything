@@ -50,6 +50,7 @@ from .sun_rgbd_loader import get_sunrgbd_loader
 from .vkitti import get_vkitti_loader
 from .vkitti2 import get_vkitti2_loader
 from .easyvolcap import get_easyvolcap_loader
+from .generalizable import get_generalizable_loader
 
 from .preprocess import CropParams, get_white_border, get_black_border
 
@@ -129,6 +130,12 @@ class DepthDataLoader(object):
         # TODO: add, loading EasyVolcap format dataset
         if 'easyvolcap' in config.dataset:
             self.data = get_easyvolcap_loader(
+                config, batch_size=1, mode=mode, num_workers=0)
+            return
+
+        # TODO: add, loading generalizable EasyVolcap format dataset
+        if 'generalizable' in config.dataset:
+            self.data = get_generalizable_loader(
                 config, batch_size=1, mode=mode, num_workers=0)
             return
 

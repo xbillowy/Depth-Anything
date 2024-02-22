@@ -16,7 +16,10 @@ from easyvolcap.utils.data_utils import DataSplit, UnstructuredTensors, load_res
 
 
 class EasyVolcap(Dataset):
-    def __init__(self, config):
+    def __init__(self,
+                 config
+                 ):
+
         self.dataset = config.dataset
         # Get the paths to the data, modify them in the config file `metric_depth/zoedepth/utils/config.py`
         self.data_root = config.data_root
@@ -276,6 +279,7 @@ class EasyVolcap(Dataset):
         return rgb, msk, wet, dpt
 
     def __getitem__(self, idx):
+        # Prepare the output data
         data = dict()
         data['dataset'] = self.dataset
 
@@ -293,14 +297,13 @@ class EasyVolcap(Dataset):
         # Load the rgb image, depth and mask
         rgb, msk, _, dpt = self.get_image(view_index, latent_index)
         # Deal with the order of the channels
-        rgb = rgb.permute(2, 0, 1)  # 3, H, W
-        msk = msk.permute(2, 0, 1)  # 1, H, W
-        dpt = dpt.permute(2, 0, 1)  # 1, H, W
-        data['image'], data['depth'], data['mask'] = rgb, dpt, msk
+        data['image'] = rgb.permute(2, 0, 1)  # 3, H, W
+        if dpt is not None: data['depth'] = dpt.permute(2, 0, 1)  # 1, H, W
+        if msk is not None: data['mask']  = msk.permute(2, 0, 1)  # 1, H, W
 
         # Record the paths?
-        rgb_path, dpt_path = self.ims[view_index, latent_index], self.dps[view_index, latent_index]
-        data['image_path'], data['depth_path'] = rgb_path, dpt_path
+        data['image_path'] = self.ims[view_index, latent_index]
+        if dpt is not None: data['depth_path'] = self.dps[view_index, latent_index]
 
         return data
 

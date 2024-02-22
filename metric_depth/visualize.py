@@ -97,7 +97,7 @@ def evaluate(model, test_loader, config, round_vals=True, round_precision=3):
 
     return metrics
 
-def main(config, visualize=False):
+def main(config, visualize_only=False):
     # Build the model, move to GPU and set as eval mode
     model = build_model(config)
     model = model.cuda()
@@ -107,7 +107,7 @@ def main(config, visualize=False):
     test_loader = DepthDataLoader(config, 'online_eval').data
 
     # Evaluate the model
-    if not visualize:
+    if not visualize_only:
         metrics = evaluate(model, test_loader, config)
         print(f"{colors.fg.green}")
         print(metrics)
@@ -121,7 +121,7 @@ def main(config, visualize=False):
     return metrics
 
 
-def eval_model(model_name, pretrained_resource, dataset='easyvolcap_test', visualize=False, **kwargs):
+def eval_model(model_name, pretrained_resource, dataset='easyvolcap_test', visualize_only=False, **kwargs):
     # Load default pretrained resource defined in config if not set
     overwrite = {**kwargs, "pretrained_resource": pretrained_resource} if pretrained_resource else kwargs
     config = get_config(model_name, "eval", dataset, **overwrite)
@@ -129,7 +129,7 @@ def eval_model(model_name, pretrained_resource, dataset='easyvolcap_test', visua
 
     # Start evaluating or visualizing
     print(f"Evaluating {model_name} on {dataset}...")
-    metrics = main(config, visualize)
+    metrics = main(config, visualize_only)
 
     return metrics
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--model", type=str, required=True, help="Name of the model to evaluate")
     parser.add_argument("-p", "--pretrained_resource", type=str, required=False, default="", help="Pretrained resource to use for fetching weights. If not set, default resource from model config is used,  Refer models.model_io.load_state_from_resource for more details.")
     parser.add_argument("-d", "--dataset", type=str, required=False, default='easyvolcap_test', help="Dataset to evaluate on")
-    parser.add_argument("--visualize", action='store_true', help="Only display the prediction")
+    parser.add_argument("-v", "--visualize_only", action='store_true', help="Only display the prediction")
 
     args, unknown_args = parser.parse_known_args()
     overwrite_kwargs = parse_unknown(unknown_args)
@@ -151,4 +151,4 @@ if __name__ == '__main__':
     else: datasets = [args.dataset]
     
     for dataset in datasets:
-        eval_model(args.model, pretrained_resource=args.pretrained_resource, dataset=dataset, visualize=args.visualize, **overwrite_kwargs)
+        eval_model(args.model, pretrained_resource=args.pretrained_resource, dataset=dataset, visualize_only=args.visualize_only, **overwrite_kwargs)
