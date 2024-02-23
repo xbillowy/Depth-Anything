@@ -291,37 +291,37 @@ DATASETS_CONFIG = {
         "garg_crop": False,
         "result_dir": "result/synthetic_room/room_412/thuman2_actor055/",
     },
-    # "easyvolcap_test": {
-    #     "dataset": "easyvolcap_test",
-    #     "split": "test",
-    #     "data_root": os.path.join(HOME_DIR, "webcam/complex/layout/conf2/"),
-    #     "intri_file": "intri.yml",
-    #     "extri_file": "extri.yml",
-    #     "images_dir": "images",
-    #     "depths_dir": "depths",
-    #     "cameras_dir": "cameras",  # only when the camera is moving through time
-    #     "masks_dir": "masks",
-    #     "ims_pattern": "{frame:06d}.jpg",
-    #     "view_sample": [0, None, 1],
-    #     "frame_sample": [0, 1, 1],
-    #     "use_masks": False,
-    #     "use_depths": False,
-    #     "dist_mask": [1, 1, 1, 1, 1],
-    #     "ratio": 1.0,
-    #     "imsize_overwrite": [-1, -1],
-    #     "center_crop_size": [-1, -1],
-    #     "dist_opt_K": False,
-    #     "encode_ext": ".jpg",
-    #     # The depth range, may be used for model?
-    #     # It seems that the depth range is not used in the model, only for metric evaluation?
-    #     "min_depth_eval": 1e-3,
-    #     "max_depth_eval": 12,
-    #     "min_depth": 1e-3,
-    #     "max_depth": 12,
-    #     "eigen_crop": False,
-    #     "garg_crop": False,
-    #     "result_dir": os.path.join(HOME_DIR, "result/webcam/complex/layout/conf2/"),
-    # },
+    "easyvolcap_visualize": {
+        "dataset": "easyvolcap_visualize",
+        "split": "test",
+        "data_root": os.path.join(HOME_DIR, "webcam/complex/layout/conf2/"),
+        "intri_file": "intri.yml",
+        "extri_file": "extri.yml",
+        "images_dir": "images",
+        "depths_dir": "depths",
+        "cameras_dir": "cameras",  # only when the camera is moving through time
+        "masks_dir": "masks",
+        "ims_pattern": "{frame:06d}.jpg",
+        "view_sample": [0, None, 1],
+        "frame_sample": [0, 1, 1],
+        "use_masks": False,
+        "use_depths": False,
+        "dist_mask": [1, 1, 1, 1, 1],
+        "ratio": 1.0,
+        "imsize_overwrite": [-1, -1],
+        "center_crop_size": [-1, -1],
+        "dist_opt_K": False,
+        "encode_ext": ".jpg",
+        # The depth range, may be used for model?
+        # It seems that the depth range is not used in the model, only for metric evaluation?
+        "min_depth_eval": 1e-3,
+        "max_depth_eval": 12,
+        "min_depth": 1e-3,
+        "max_depth": 12,
+        "eigen_crop": False,
+        "garg_crop": False,
+        "result_dir": os.path.join(HOME_DIR, "result/webcam/complex/layout/conf2/"),
+    },
     "generalizable": {
         "dataset": "generalizable",
         "split": "train",
@@ -504,7 +504,7 @@ def get_config(model_name, mode='train', dataset=None, **overwrite_kwargs):
     check_choices("Mode", mode, ["train", "infer", "eval"])
     if mode == "train":
         # TODO: modified, add EasyVolcap format dataset choice
-        check_choices("Dataset", dataset, ["nyu", "kitti", "mix", "easyvolcap", "easyvolcap_test", "generalizable"])
+        check_choices("Dataset", dataset, ["nyu", "kitti", "mix", "easyvolcap", "easyvolcap_test", "easyvolcap_visualize", "generalizable"])
 
     config = flatten({**COMMON_CONFIG, **COMMON_TRAINING_CONFIG})
     config = update_model_config(config, mode, model_name)

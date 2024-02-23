@@ -313,7 +313,7 @@ class EasyVolcap(Dataset):
 
 def get_easyvolcap_loader(config, batch_size=1, mode='train', **kwargs):
     # FIXME: find a better way to handle EasyVolcap test dataset
-    if mode == 'online_eval' and 'test' not in config.dataset:
+    if mode == 'online_eval' and 'test' not in config.dataset and 'visualize' not in config.dataset:
         config.split = 'test'
         config.view_sample = [0, None, 660]
         config.frame_sample = [0, None, 1]
