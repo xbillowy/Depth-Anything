@@ -23,6 +23,7 @@ class Generalizable(Dataset):
         # Get the paths to the data, modify them in the config file `metric_depth/zoedepth/utils/config.py`
         self.data_roots = config.data_roots  # this will overwrite the dataset configs
         self.meta_roots = config.meta_roots  # this will overwrite thet data_roots configs,
+        self.excd_roots = config.excd_roots  # this will exclude the data_roots
 
         # Prepare for dataset config
         if self.meta_roots and self.data_roots:
@@ -35,7 +36,7 @@ class Generalizable(Dataset):
             for meta_root in self.meta_roots:
                 meta_data_roots = sorted(glob(join(meta_root, '*')))
                 for data_root in meta_data_roots:
-                    if os.path.isdir(data_root):
+                    if os.path.isdir(data_root) and data_root not in self.excd_roots:
                         if os.path.exists(join(data_root, 'images')):
                             data_roots.append(data_root)
 

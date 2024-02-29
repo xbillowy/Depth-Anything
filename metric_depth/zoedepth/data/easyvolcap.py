@@ -54,6 +54,7 @@ class EasyVolcap(Dataset):
         self.split = config.split
         self.dist_opt_K = config.dist_opt_K
         self.encode_ext = config.encode_ext
+        self.cache_raw = config.cache_raw
 
         # Load the image paths and the corresponding depth paths
         self.load_paths()  # load image files into self.ims
@@ -212,10 +213,11 @@ class EasyVolcap(Dataset):
         self.Hs = torch.as_tensor(self.Hs)
         self.Ws = torch.as_tensor(self.Ws)
 
-        # To make memory access faster, store raw floats in memory
-        self.ims_bytes = to_tensor([load_image_from_bytes(x, normalize=True) for x in tqdm(self.ims_bytes, desc=f'Caching imgs for {blue(self.data_root)} {magenta(self.split)}')])  # High mem usage
-        if hasattr(self, 'mks_bytes'): self.mks_bytes = to_tensor([load_image_from_bytes(x, normalize=True) for x in tqdm(self.mks_bytes, desc=f'Caching mks for {blue(self.data_root)} {magenta(self.split)}')])
-        if hasattr(self, 'dps_bytes'): self.dps_bytes = to_tensor([load_image_from_bytes(x, normalize=False) for x in tqdm(self.dps_bytes, desc=f'Caching dps for {blue(self.data_root)} {magenta(self.split)}')])
+        if self.cache_raw:
+            # To make memory access faster, store raw floats in memory
+            self.ims_bytes = to_tensor([load_image_from_bytes(x, normalize=True) for x in tqdm(self.ims_bytes, desc=f'Caching imgs for {blue(self.data_root)} {magenta(self.split)}')])  # High mem usage
+            if hasattr(self, 'mks_bytes'): self.mks_bytes = to_tensor([load_image_from_bytes(x, normalize=True) for x in tqdm(self.mks_bytes, desc=f'Caching mks for {blue(self.data_root)} {magenta(self.split)}')])
+            if hasattr(self, 'dps_bytes'): self.dps_bytes = to_tensor([load_image_from_bytes(x, normalize=False) for x in tqdm(self.dps_bytes, desc=f'Caching dps for {blue(self.data_root)} {magenta(self.split)}')])
 
     @property
     def n_views(self): return len(self.cameras)
@@ -258,23 +260,35 @@ class EasyVolcap(Dataset):
         rgb, msk, wet, dpt = None, None, None, None
 
         # Load image from bytes
-        rgb = torch.as_tensor(im_bytes)
+        if self.cache_raw:
+            rgb = torch.as_tensor(im_bytes)
+        else:
+            rgb = torch.as_tensor(load_image_from_bytes(im_bytes, normalize=True))  # 4-5ms for 400 * 592 jpeg, sooo slow
 
         # Load mask from bytes
         if mk_bytes is not None:
-            msk = torch.as_tensor(mk_bytes)
+            if self.cache_raw:
+                msk = torch.as_tensor(mk_bytes)
+            else:
+                msk = torch.as_tensor(load_image_from_bytes(mk_bytes, normalize=True)[..., :1])
         else:
             msk = torch.ones_like(rgb[..., -1:])
 
         # Load sampling weights from bytes
         if wt_bytes is not None:
-            wet = torch.as_tensor(wt_bytes)
+            if self.cache_raw:
+                wet = torch.as_tensor(wt_bytes)
+            else:
+                wet = torch.as_tensor(load_image_from_bytes(wt_bytes, normalize=True)[..., :1])
         else:
             wet = msk.clone()
 
         # Load depth from bytes
         if dp_bytes is not None:
-            dpt = torch.as_tensor(dp_bytes)
+            if self.cache_raw:
+                dpt = torch.as_tensor(dp_bytes)
+            else:
+                dpt = torch.as_tensor(load_image_from_bytes(dp_bytes, normalize=False)[..., :1])  # readin as is
 
         return rgb, msk, wet, dpt
 
