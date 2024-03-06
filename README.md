@@ -7,6 +7,8 @@
 
 <sup>+</sup>corresponding authors
 
+**CVPR 2024**
+
 <a href="https://arxiv.org/abs/2401.10891"><img src='https://img.shields.io/badge/arXiv-Depth Anything-red' alt='Paper PDF'></a>
 <a href='https://depth-anything.github.io'><img src='https://img.shields.io/badge/Project_Page-Depth Anything-green' alt='Project Page'></a>
 <a href='https://huggingface.co/spaces/LiheYoung/Depth-Anything'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'></a>
@@ -19,6 +21,7 @@ This work presents Depth Anything, a highly practical solution for robust monocu
 
 ## News
 
+* **2024-02-27:** Depth Anything is accepted by CVPR 2024.
 * **2024-02-05:** [Depth Anything Gallery](./gallery.md) is released. Thank all the users!
 * **2024-02-02:** Depth Anything serves as the default depth processor for [InstantID](https://github.com/InstantID/InstantID) and [InvokeAI](https://github.com/invoke-ai/InvokeAI/releases/tag/v3.6.1).
 * **2024-01-25:** Support [video depth visualization](./run_video.py). An [online demo for video](https://huggingface.co/spaces/JohanDL/Depth-Anything-Video) is also available.
@@ -87,21 +90,30 @@ depth_anything = DepthAnything.from_pretrained('LiheYoung/depth_anything_{:}14'.
 
 Depth Anything is also supported in [``transformers``](https://github.com/huggingface/transformers). You can use it for depth prediction within [3 lines of code](https://huggingface.co/docs/transformers/main/model_doc/depth_anything) (credit to [@niels](https://huggingface.co/nielsr)).
 
-### No network connection, cannot load these models?
+### *No network connection, cannot load these models?*
 
 <details>
 <summary>Click here for solutions</summary>
 
-- First, please manually download our models (both config and checkpoints files) from here: [depth-anything-small](https://huggingface.co/LiheYoung/depth_anything_vits14), [depth-anything-base](https://huggingface.co/LiheYoung/depth_anything_vitb14), and [depth-anything-large](https://huggingface.co/LiheYoung/depth_anything_vitl14).
+- First, manually download the three checkpoints: [depth-anything-large](https://huggingface.co/spaces/LiheYoung/Depth-Anything/blob/main/checkpoints/depth_anything_vitl14.pth), [depth-anything-base](https://huggingface.co/spaces/LiheYoung/Depth-Anything/blob/main/checkpoints/depth_anything_vitb14.pth), and [depth-anything-small](https://huggingface.co/spaces/LiheYoung/Depth-Anything/blob/main/checkpoints/depth_anything_vits14.pth).
 
-- Second, upload the folder which contains config and checkpoint files to your remote server.
+- Second, upload the folder containing the checkpoints to your remote server.
 
-- Lastly, load the model locally by:
+- Lastly, load the model locally:
 ```python
-# suppose the config and checkpoint files are stored under the folder checkpoints/depth_anything_vitb14
-depth_anything = DepthAnything.from_pretrained('checkpoints/depth_anything_vitb14', local_files_only=True)
-```
+from depth_anything.dpt import DepthAnything
 
+model_configs = {
+    'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
+    'vitb': {'encoder': 'vitb', 'features': 128, 'out_channels': [96, 192, 384, 768]},
+    'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]}
+}
+
+encoder = 'vitl' # or 'vitb', 'vits'
+depth_anything = DepthAnything(model_configs[encoder])
+depth_anything.load_state_dict(torch.load(f'./checkpoints/depth_anything_{encoder}14.pth'))
+```
+Note that in this locally loading manner, you also do not have to install the ``huggingface_hub`` package. In this way, please feel free to delete this [line](https://github.com/LiheYoung/Depth-Anything/blob/e7ef4b4b7a0afd8a05ce9564f04c1e5b68268516/depth_anything/dpt.py#L5) and the ``PyTorchModelHubMixin`` in this [line](https://github.com/LiheYoung/Depth-Anything/blob/e7ef4b4b7a0afd8a05ce9564f04c1e5b68268516/depth_anything/dpt.py#L169).
 </details>
 
 
@@ -209,7 +221,7 @@ depth = pipe(image)["depth"]
 
 ## Community Support
 
-**We sincerely appreciate all the extentions built on our Depth Anything from the community. Thank you a lot!**
+**We sincerely appreciate all the extensions built on our Depth Anything from the community. Thank you a lot!**
 
 Here we list the extensions we have found:
 - Depth Anything TensorRT: 
@@ -224,6 +236,15 @@ Here we list the extensions we have found:
 - Depth Anything in X-AnyLabeling: https://github.com/CVHub520/X-AnyLabeling
 - Depth Anything in OpenXLab: https://openxlab.org.cn/apps/detail/yyfan/depth_anything
 - Depth Anything in OpenVINO: https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/280-depth-anything
+- Depth Anything ROS:
+    - https://github.com/scepter914/DepthAnything-ROS
+    - https://github.com/polatztrk/depth_anything_ros
+- Depth Anything Android:
+    - https://github.com/FeiGeChuanShu/ncnn-android-depth_anything
+    - https://github.com/shubham0204/Depth-Anything-Android
+- Depth Anything in TouchDesigner: https://github.com/olegchomp/TDDepthAnything
+- LearnOpenCV research article on Depth Anything: https://learnopencv.com/depth-anything
+     
 
 If you have your amazing projects supporting or improving (*e.g.*, speed) Depth Anything, please feel free to drop an issue. We will add them here.
 
@@ -239,10 +260,10 @@ Besides, we thank the [MagicEdit](https://magic-edit.github.io/) team for provid
 If you find this project useful, please consider citing:
 
 ```bibtex
-@article{depthanything,
+@inproceedings{depthanything,
       title={Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data}, 
       author={Yang, Lihe and Kang, Bingyi and Huang, Zilong and Xu, Xiaogang and Feng, Jiashi and Zhao, Hengshuang},
-      journal={arXiv:2401.10891},
+      booktitle={CVPR},
       year={2024}
 }
 ```
