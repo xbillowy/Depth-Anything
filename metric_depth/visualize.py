@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import argparse
 from tqdm import tqdm
@@ -57,9 +58,16 @@ def visualize(model, test_loader, config):
     for i, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
         # Fetch the image and depth from the sample and move to GPU
         image = batch['image'].cuda()  # (B, 3, H, W)
+
+        # Forward pass
+        torch.cuda.synchronize()
+        s = time.time()
         preds = model(image, dataset=batch['dataset'][0])['metric_depth']  # (B, 1, H, W)
         # Interpolate the predicted depth to the original size
         preds = F.interpolate(preds, (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        torch.cuda.synchronize()
+        e = time.time()
+        print(f"Network time for processing a image of size {batch['H'][0].item()} x {batch['W'][0].item()} is {e-s}")
 
         # Save image and predicted depth for visualization
         save(None, preds, image, batch, config)
@@ -81,9 +89,16 @@ def evaluate(model, test_loader, config, round_vals=True, round_precision=3):
 
         # Fetch the image and depth from the sample and move to GPU
         image, depth = batch['image'].cuda(), batch['depth'].cuda()  # (B, 3, H, W), (B, 1, H, W)
+
+        # Forward pass
+        torch.cuda.synchronize()
+        s = time.time()
         preds = model(image, dataset=batch['dataset'][0])['metric_depth']  # (B, 1, Hn, Wn)
         # Interpolate the predicted depth to the original size
         preds = F.interpolate(preds, (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        torch.cuda.synchronize()
+        e = time.time()
+        print(f"Network time for processing a image of size {batch['H'][0].item()} x {batch['W'][0].item()} is {e-s}")
 
         # Save image, ground truth depth, and predicted depth for visualization
         save(depth, preds, image, batch, config)

@@ -11,6 +11,8 @@ from tqdm import tqdm
 from depth_anything.dpt import DepthAnything
 from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
 
+from easyvolcap.utils.data_utils import save_image
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -18,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', type=str, default='./vis_depth')
     parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl'])
     
+    parser.add_argument('--save_raw', dest='save_raw', action='store_true', help='save the raw prediction as .exr')
     parser.add_argument('--pred-only', dest='pred_only', action='store_true', help='only display the prediction')
     parser.add_argument('--grayscale', dest='grayscale', action='store_true', help='do not apply colorful palette')
     
@@ -86,6 +89,13 @@ if __name__ == '__main__':
             print(f'network time for processing a image of size {h} x {w} is {et-st}')
         
         depth = F.interpolate(depth[None], (h, w), mode='bilinear', align_corners=False)[0, 0]
+
+        if args.save_raw:
+            # TODO: modified, save the `.exr` format depth image
+            depth = (depth - depth.min()) / (depth.max() - depth.min())
+            save_image(os.path.join(args.outdir, filename.split('/')[-1][:filename.rfind('.')] + '.exr'), depth)
+            continue
+
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         
         depth = depth.cpu().numpy().astype(np.uint8)
