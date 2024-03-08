@@ -266,7 +266,7 @@ DATASETS_CONFIG = {
         "split": "test",
         "cache_raw": True,
         # "data_root": os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0057"),
-        "data_root": [os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0135")],
+        "data_root": os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0135"),
         "intri_file": "intri.yml",
         "extri_file": "extri.yml",
         "images_dir": "images",
