@@ -332,17 +332,49 @@ class DepthAnythingCore(nn.Module):
         # self.output_channels = [256, 256, 256, 256, 256]
         self.output_channels = [64, 64, 64, 64, 64]
 
+    # @staticmethod
+    # def build(midas_model_type="dinov2_large", train_midas=False, use_pretrained_midas=True, fetch_features=False, freeze_bn=True, force_keep_ar=False, force_reload=False, **kwargs):
+    #     if "img_size" in kwargs:
+    #         kwargs = DepthAnythingCore.parse_img_size(kwargs)
+    #     img_size = kwargs.pop("img_size", [384, 384])
+        
+    #     depth_anything = DPT_DINOv2(out_channels=[256, 512, 1024, 1024], use_clstoken=False)
+        
+    #     state_dict = torch.load('./checkpoints/depth_anything_vitl14.pth', map_location='cpu')
+    #     depth_anything.load_state_dict(state_dict)
+        
+    #     kwargs.update({'keep_aspect_ratio': force_keep_ar})
+        
+    #     depth_anything_core = DepthAnythingCore(depth_anything, trainable=train_midas, fetch_features=fetch_features,
+    #                            freeze_bn=freeze_bn, img_size=img_size, **kwargs)
+        
+    #     depth_anything_core.set_output_channels()
+    #     return depth_anything_core
+
+    # TODO: modified, a more general build function with more parameters
     @staticmethod
-    def build(midas_model_type="dinov2_large", train_midas=False, use_pretrained_midas=True, fetch_features=False, freeze_bn=True, force_keep_ar=False, force_reload=False, **kwargs):
+    def build(midas_model_type="dinov2_large",
+              use_pretrained_midas=True,
+              train_midas=False,
+              fetch_features=False,
+              freeze_bn=True,
+              force_keep_ar=False,
+              force_reload=False,
+              encoder='vits',
+              features=64,
+              out_channels=[48, 96, 192, 384],
+              use_cls_token=False,
+              checkpoint_path='./checkpoints/depth_anything_vits14.pth',
+              **kwargs
+              ):
+
         if "img_size" in kwargs:
             kwargs = DepthAnythingCore.parse_img_size(kwargs)
         img_size = kwargs.pop("img_size", [384, 384])
 
-        # TODO: modified, use `vits14` as enccoder for better eval speed
-        # depth_anything = DPT_DINOv2(out_channels=[256, 512, 1024, 1024], use_clstoken=False)
-        # state_dict = torch.load('./checkpoints/depth_anything_vitl14.pth', map_location='cpu')
-        depth_anything = DPT_DINOv2(encoder='vits', features=64, out_channels=[48, 96, 192, 384], use_clstoken=False)
-        state_dict = torch.load('./checkpoints/depth_anything_vits14.pth', map_location='cpu')
+        # Create the backbone
+        depth_anything = DPT_DINOv2(encoder=encoder, features=features, out_channels=out_channels, use_clstoken=use_cls_token)
+        state_dict = torch.load(checkpoint_path, map_location='cpu')
 
         depth_anything.load_state_dict(state_dict)
         

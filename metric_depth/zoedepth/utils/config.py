@@ -266,7 +266,7 @@ DATASETS_CONFIG = {
         "split": "test",
         "cache_raw": True,
         # "data_root": os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0057"),
-        "data_root": os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0135"),
+        "data_root": os.path.join(HOME_DIR, "synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0103"),
         "intri_file": "intri.yml",
         "extri_file": "extri.yml",
         "images_dir": "images",
@@ -293,7 +293,7 @@ DATASETS_CONFIG = {
         "eigen_crop": False,
         "garg_crop": False,
         # "result_dir": "result/metric/02291312/synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0057",
-        "result_dir": "result/metric/03071731/synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0135",
+        "result_dir": "result/metric/03071731/synthetic_room/3d-front/7f6a4e30/front/THuman2.0/0103",
     },
     "easyvolcap_visualize": {
         "dataset": "easyvolcap_visualize",

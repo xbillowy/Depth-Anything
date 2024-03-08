@@ -245,14 +245,36 @@ class ZoeDepth(DepthModel):
 
         return param_conf
 
+    # @staticmethod
+    # def build(midas_model_type="DPT_BEiT_L_384", pretrained_resource=None, use_pretrained_midas=False, train_midas=False, freeze_midas_bn=True, **kwargs):
+    #     # core = MidasCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
+    #     #                        train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
+        
+    #     core = DepthAnythingCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
+    #                                    train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
+        
+    #     model = ZoeDepth(core, **kwargs)
+    #     if pretrained_resource:
+    #         assert isinstance(pretrained_resource, str), "pretrained_resource must be a string"
+    #         model = load_state_from_resource(model, pretrained_resource)
+    #     return model
+
+    # TODO: modified, a modified version with more arguments control
     @staticmethod
-    def build(midas_model_type="DPT_BEiT_L_384", pretrained_resource=None, use_pretrained_midas=False, train_midas=False, freeze_midas_bn=True, **kwargs):
+    def build(midas_model_type="DPT_BEiT_L_384",
+              pretrained_resource=None,  # set this
+              use_pretrained_midas=False,
+              train_midas=False,  # maybe set this
+              fetch_features=True,  # maybe set this
+              freeze_midas_bn=True,  # maybe set this
+              **kwargs
+              ):
         # core = MidasCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
         #                        train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
         
         # TODO: comment, this will invoke `metric_depth/zoedepth/models/base_models/depth_anything.py: build()`
         core = DepthAnythingCore.build(midas_model_type=midas_model_type, use_pretrained_midas=use_pretrained_midas,
-                                       train_midas=train_midas, fetch_features=True, freeze_bn=freeze_midas_bn, **kwargs)
+                                       train_midas=train_midas, fetch_features=fetch_features, freeze_bn=freeze_midas_bn, **kwargs)
         
         model = ZoeDepth(core, **kwargs)
         if pretrained_resource:
