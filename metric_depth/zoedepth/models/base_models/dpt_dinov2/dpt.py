@@ -130,14 +130,29 @@ class DPTHead(nn.Module):
         return out
 
 
+# class DPT_DINOv2(nn.Module):
+#     def __init__(self, encoder='vitl', features=256, use_bn=False, out_channels=[256, 512, 1024, 1024], use_clstoken=False):
+
+#         super(DPT_DINOv2, self).__init__()
+
+#         torch.manual_seed(1)
+        
+#         self.pretrained = torch.hub.load('../torchhub/facebookresearch_dinov2_main', 'dinov2_{:}14'.format(encoder), source='local', pretrained=False)
+        
+#         dim = self.pretrained.blocks[0].attn.qkv.in_features
+        
+#         self.depth_head = DPTHead(dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
+
+# TODO: modified, a more general build function with more parameters
 class DPT_DINOv2(nn.Module):
-    def __init__(self, encoder='vitl', features=256, use_bn=False, out_channels=[256, 512, 1024, 1024], use_clstoken=False):
+    def __init__(self, encoder='vitl', features=256, use_bn=False, out_channels=[256, 512, 1024, 1024], use_clstoken=False,
+                 fbk_dinov2_ckpt='../torchhub/facebookresearch_dinov2_main'):
 
         super(DPT_DINOv2, self).__init__()
 
         torch.manual_seed(1)
         
-        self.pretrained = torch.hub.load('../torchhub/facebookresearch_dinov2_main', 'dinov2_{:}14'.format(encoder), source='local', pretrained=False)
+        self.pretrained = torch.hub.load(fbk_dinov2_ckpt, 'dinov2_{:}14'.format(encoder), source='local', pretrained=False)
         
         dim = self.pretrained.blocks[0].attn.qkv.in_features
         

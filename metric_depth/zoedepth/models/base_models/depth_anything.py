@@ -364,7 +364,8 @@ class DepthAnythingCore(nn.Module):
               features=64,
               out_channels=[48, 96, 192, 384],
               use_cls_token=False,
-              checkpoint_path='./checkpoints/depth_anything_vits14.pth',
+              fbk_dinov2_ckpt='../torchhub/facebookresearch_dinov2_main',
+              dpt_dinov2_ckpt='./checkpoints/depth_anything_vits14.pth',
               **kwargs
               ):
 
@@ -373,8 +374,8 @@ class DepthAnythingCore(nn.Module):
         img_size = kwargs.pop("img_size", [384, 384])
 
         # Create the backbone
-        depth_anything = DPT_DINOv2(encoder=encoder, features=features, out_channels=out_channels, use_clstoken=use_cls_token)
-        state_dict = torch.load(checkpoint_path, map_location='cpu')
+        depth_anything = DPT_DINOv2(encoder=encoder, features=features, out_channels=out_channels, use_clstoken=use_cls_token, fbk_dinov2_ckpt=fbk_dinov2_ckpt)
+        state_dict = torch.load(dpt_dinov2_ckpt, map_location='cpu')
 
         depth_anything.load_state_dict(state_dict)
         
