@@ -1,11 +1,14 @@
 import os
 import cv2
 import torch
+import random
 import numpy as np
 from PIL import Image
 from glob import glob
 from torchvision import transforms as T
 from torch.utils.data import DataLoader, Dataset
+
+from zoedepth.utils.data_utils import rotate_image
 
 from easyvolcap.utils.console_utils import *
 from easyvolcap.utils.base_utils import dotdict
@@ -21,6 +24,7 @@ class EasyVolcap(Dataset):
                  ):
 
         self.dataset = config.dataset
+        self.split = config.split
         # Get the paths to the data, modify them in the config file `metric_depth/zoedepth/utils/config.py`
         self.data_root = config.data_root
         self.intri_file = config.intri_file
@@ -51,7 +55,6 @@ class EasyVolcap(Dataset):
         self.ratio = config.ratio
         self.imsize_overwrite = config.imsize_overwrite
         self.center_crop_size = config.center_crop_size
-        self.split = config.split
         self.dist_opt_K = config.dist_opt_K
         self.encode_ext = config.encode_ext
         self.cache_raw = config.cache_raw
@@ -60,6 +63,20 @@ class EasyVolcap(Dataset):
         self.load_paths()  # load image files into self.ims
         # Load the images and the corresponding depths
         self.load_bytes()
+
+        # Data augmentationn related stuff
+        self.augment = config.get('aug', True)  # default True
+        self.random_crop = config.get('random_crop', False)  # default False
+        self.crop_size = config.get('crop_size', None)  # default None
+        self.random_translate = config.get('random_translate', False)  # default False
+        self.translate_maxl = config.get('translate_maxl', None)  # default None
+        self.translate_prob = config.get('translate_prob', 0.20)  # default 0.20
+        self.random_rotate = config.get('do_random_rotate', True)  # default True
+        self.rotate_degree = config.get('rotate_degree', 1)  # default 1
+
+        # Data preprocessing related stuff
+        self.do_normalize = config.get('do_normalize', False)  # default False
+        self.normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def load_cameras(self):
         # Load camera related stuff like image list and intri, extri.
@@ -310,10 +327,14 @@ class EasyVolcap(Dataset):
 
         # Load the rgb image, depth and mask
         rgb, msk, _, dpt = self.get_image(view_index, latent_index)
+        # Perform augmentation
+        rgb, dpt, msk = self.perform_augment(rgb, dpt, msk)  # H, W, 3; H, W, 1; H, W, 1
         # Deal with the order of the channels
         data['image'] = rgb.permute(2, 0, 1)  # 3, H, W
         if dpt is not None: data['depth'] = dpt.permute(2, 0, 1)  # 1, H, W
         if msk is not None: data['mask']  = msk.permute(2, 0, 1)  # 1, H, W
+        # Perform normalization if needed
+        if self.do_normalize: data['image'] = self.normalize(data['image'])
 
         # Record the paths?
         data['image_path'] = self.ims[view_index, latent_index]
@@ -323,6 +344,109 @@ class EasyVolcap(Dataset):
 
     def __len__(self):
         return self.n_views * self.n_latents  # there's no notion of epoch here
+
+    def perform_augment(self, img, dpt, msk):
+        # Return directly if no augmentation is needed
+        if self.split != 'train' or not self.augment: return img, dpt, msk
+
+        # Convert from torch.Tensor to numpy.ndarray first
+        img = img.numpy()  # H, W, 3
+        if dpt is not None: dpt = dpt.numpy()  # H, W, 1
+        if msk is not None: msk = msk.numpy()  # H, W, 1
+
+        # Perform different augmentations
+        if self.random_rotate:
+            img, dpt, msk = self.perform_random_rotate(img, dpt, msk, self.rotate_degree)
+        if self.random_crop:
+            img, dpt, msk = self.perform_random_crop(img, dpt, msk, self.crop_size)
+        if self.random_translate:
+            img, dpt, msk = self.perform_random_translate(img, dpt, msk, self.translate_maxl, self.translate_prob)
+
+        # Perform random flip
+        img, dpt, msk = self.perform_random_flip(img, dpt, msk)
+        # Perform gamma, brightness and color augmentation
+        img = self.perform_random_augment(img)
+
+        # Convert from numpy.ndarray to torch.Tensor
+        img = torch.as_tensor(img, dtype=torch.float32)  # H, W, 3
+        if dpt is not None: dpt = torch.as_tensor(dpt, dtype=torch.float32)  # H, W, 1
+        if msk is not None: msk = torch.as_tensor(msk, dtype=torch.float32)  # H, W, 1
+
+        return img, dpt, msk
+
+    def perform_random_rotate(self, img, dpt, msk, rotate_degree=1):
+        # Get rotate angle
+        rotate_angle = (random.random() - 0.5) * 2 * rotate_degree
+
+        # Perform random rotate
+        img = rotate_image(img, rotate_angle)
+        if dpt is not None: dpt = rotate_image(dpt, rotate_angle)
+        if msk is not None: msk = rotate_image(msk, rotate_angle)
+
+        return img, dpt, msk
+
+    def perform_random_flip(self, img, dpt, msk):
+        # Return directly if no flip is needed
+        if random.random() < 0.5: return img, dpt, msk
+
+        # Perform flip
+        img = img[:, ::-1, :].copy()
+        if dpt is not None: dpt = dpt[:, ::-1, :].copy()
+        if msk is not None: msk = msk[:, ::-1, :].copy()
+
+        return img, dpt, msk
+
+    def perform_random_augment(self, img):
+        # Return directly if no augmentation is needed
+        if random.random() < 0.5: return img
+
+        # Perform gamma augmentation
+        gamma = random.uniform(0.9, 1.1)
+        img = img ** gamma
+
+        # Perform brightness augmentation
+        brightness = random.uniform(0.8, 1.2)
+        img = img * brightness
+
+        # Perform color augmentation
+        color = np.random.uniform(0.1, 1.1, size=3)  # (3,)
+        white = np.ones(img.shape[:2])  # (H, W)
+        color = np.stack([white * color[i] for i in range(len(color))], axis=-1)  # (H, W, 3)
+        img = img * color
+        img = np.clip(img, 0, 1)
+
+        return img
+
+    def perform_random_crop(self, img, dpt, msk, crop_size=None):
+        # Return directly if no random crop is needed
+        assert crop_size is not None, 'The crop size should be specified'
+
+        Ho, Wo = img.shape[:2]
+        Hc, Wc = crop_size
+        # Perform random crop
+        x, y = random.randint(0, Wo - Wc), random.randint(0, Ho - Hc)
+        img = img[y:y + Hc, x:x + Wc, :]
+        if dpt is not None: dpt = dpt[y:y + Hc, x:x + Wc]
+        if msk is not None: msk = msk[y:y + Hc, x:x + Wc]
+
+        return img, dpt, msk
+
+    def perform_random_translate(self, img, dpt, msk, translate_maxl=None, translate_prob=0.20):
+        # Return directly if no random translate is needed
+        assert translate_maxl is not None, 'The maximum translation length should be specified'
+
+        # Return directly if the random translate is not performed
+        if random.random() > translate_prob or translate_maxl <= 0: return img, dpt, msk
+
+        # Perform random translation
+        H, W = img.shape[:2]
+        x, y = random.randint(-translate_maxl, translate_maxl), random.randint(-translate_maxl, translate_maxl)
+        M = np.float32([[1, 0, x], [0, 1, y]])
+        img = cv2.warpAffine(img, M, (W, H))
+        if dpt is not None: dpt = cv2.warpAffine(dpt, M, (W, H))
+        if msk is not None: msk = cv2.warpAffine(msk, M, (W, H))
+
+        return img, dpt, msk
 
 
 def get_easyvolcap_loader(config, batch_size=1, mode='train', **kwargs):
