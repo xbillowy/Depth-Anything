@@ -36,7 +36,7 @@ class Generalizable(Dataset):
             for meta_root in self.meta_roots:
                 meta_data_roots = sorted(glob(join(meta_root, '*')))
                 for data_root in meta_data_roots:
-                    if os.path.isdir(data_root) and data_root not in self.excd_roots:
+                    if os.path.isdir(data_root) and data_root.split('/')[-1] not in self.excd_roots:
                         if os.path.exists(join(data_root, 'images')):
                             data_roots.append(data_root)
 
