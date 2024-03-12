@@ -327,10 +327,12 @@ class DepthAnythingCore(nn.Module):
     def __del__(self):
         self.remove_hooks()
 
-    def set_output_channels(self):
-        # TODO: modified, use `vits14` as enccoder for better eval speed
-        # self.output_channels = [256, 256, 256, 256, 256]
-        self.output_channels = [64, 64, 64, 64, 64]
+    # def set_output_channels(self):
+    #     self.output_channels = [256, 256, 256, 256, 256]
+
+    # TODO: modified, a more general build function with more parameters
+    def set_output_channels(self, output_channels):
+        self.output_channels = output_channels
 
     # @staticmethod
     # def build(midas_model_type="dinov2_large", train_midas=False, use_pretrained_midas=True, fetch_features=False, freeze_bn=True, force_keep_ar=False, force_reload=False, **kwargs):
@@ -366,6 +368,7 @@ class DepthAnythingCore(nn.Module):
               use_cls_token=False,
               fbk_dinov2_ckpt='../torchhub/facebookresearch_dinov2_main',
               dpt_dinov2_ckpt='./checkpoints/depth_anything_vits14.pth',
+              output_channels=[64, 64, 64, 64, 64],
               **kwargs
               ):
 
@@ -384,7 +387,7 @@ class DepthAnythingCore(nn.Module):
         depth_anything_core = DepthAnythingCore(depth_anything, trainable=train_midas, fetch_features=fetch_features,
                                freeze_bn=freeze_bn, img_size=img_size, **kwargs)
         
-        depth_anything_core.set_output_channels()
+        depth_anything_core.set_output_channels(output_channels)
         return depth_anything_core
 
     @staticmethod

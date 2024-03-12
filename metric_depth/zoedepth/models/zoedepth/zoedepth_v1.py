@@ -124,13 +124,14 @@ class ZoeDepth(DepthModel):
         self.conditional_log_binomial = ConditionalLogBinomial(
             last_in, bin_embedding_dim, n_classes=n_bins, min_temp=min_temp, max_temp=max_temp)
 
-    def forward(self, x, return_final_centers=False, denorm=False, return_probs=False, **kwargs):
+    def forward(self, x, return_final_centers=False, denorm=False, return_probs=False, return_feats=False, **kwargs):
         """
         Args:
             x (torch.Tensor): Input image tensor of shape (B, C, H, W)
             return_final_centers (bool, optional): Whether to return the final bin centers. Defaults to False.
             denorm (bool, optional): Whether to denormalize the input image. This reverses ImageNet normalization as midas normalization is different. Defaults to False.
             return_probs (bool, optional): Whether to return the output probability distribution. Defaults to False.
+            return_feats (bool, optional): Whether to return intermediate features. Defaults to False.
         
         Returns:
             dict: Dictionary containing the following keys:
@@ -141,6 +142,9 @@ class ZoeDepth(DepthModel):
 
         """
         # print('input shape', x.shape)
+        # TODO: modified, remember input shapes, x: (B, S, C, H, W) or (B, C, H, W) or (C, H, W)
+        sh = x.shape[:-3]
+        x = x.view((-1,) + x.shape[-3:])  # (B, C, H, W) or (B*S, C, H, W)
         
         b, c, h, w = x.shape
         # print("input shape:", x.shape)
@@ -153,9 +157,9 @@ class ZoeDepth(DepthModel):
         # for k in range(len(out)):
         #     print(k, out[k].shape)
         
-        outconv_activation = out[0]
-        btlnck = out[1]
-        x_blocks = out[2:]
+        outconv_activation = out[0]  # (B, C0, H, W)
+        btlnck = out[1]  # (B, C1, H//28, W//28)
+        x_blocks = out[2:]  # [(B, C1, H//14, W//14), (B, C1, H//7, W//7), (B, C1, H//3.5, W//3.5), (B, C1, H//1.75, W//1.75)]
 
         x_d0 = self.conv2(btlnck)
         x = x_d0
@@ -199,14 +203,26 @@ class ZoeDepth(DepthModel):
         b_centers = nn.functional.interpolate(
             b_centers, x.shape[-2:], mode='bilinear', align_corners=True)
         out = torch.sum(x * b_centers, dim=1, keepdim=True)
+        # TODO: modified, restore input shapes
+        out = out.view(sh + out.shape[-3:])  # (B, 1, H, W)
 
         # Structure output dict
         output = dict(metric_depth=out)
         if return_final_centers or return_probs:
+            # TODO: modified, restore input shapes
+            b_centers = b_centers.view(sh + b_centers.shape[-3:])  # (B, n_bins, H, W)
             output['bin_centers'] = b_centers
 
         if return_probs:
+            # TODO: modified, restore input shapes
+            x = x.view(sh + x.shape[-3:])  # (B, n_bins, H, W)
             output['probs'] = x
+        
+        # Return the intermediate features extracted by MiDaS if required
+        if return_feats:
+            # TODO: modified, restore input shapes
+            x_blocks = [x_block.view(sh + x_block.shape[-3:]) for x_block in x_blocks]
+            output['feats'] = x_blocks
 
         return output
 
