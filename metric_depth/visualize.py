@@ -1,4 +1,6 @@
 import os
+# os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
+
 import time
 import torch
 import argparse
@@ -21,15 +23,26 @@ from zoedepth.utils.config import change_dataset, get_config, ALL_EVAL_DATASETS,
 from easyvolcap.utils.data_utils import export_pts, save_image, to_numpy
 
 
-def save(depth, preds, image, batch, config):
+def save(depth, output, image, batch, config):
+    preds = output['metric_depth']  # (B, 1, H, W)
+    probs = output['probs'].sum(dim=-3)  # (B, N, H, W)
+
     # Get and create the full result directory
-    depths_dir = join(HOME_DIR, config.result_dir, "DEPTH")
+    depths_dir = join(HOME_DIR, config.result_dir, "DEPTH") if not config.save_raw else join(HOME_DIR, config.result_dir, "depths_mda")
     points_dir = join(HOME_DIR, config.result_dir, "POINT")
+    probas_dir = join(HOME_DIR, config.result_dir, "PROBS")
     os.makedirs(depths_dir, exist_ok=True)
     os.makedirs(points_dir, exist_ok=True)
+    os.makedirs(probas_dir, exist_ok=True)
 
     # Get the index of the sample
     name = f"frame{batch['frame_index'].item():04d}_camera{batch['camera_index'].item():04d}"
+
+    if config.save_raw:
+        depth_path = join(depths_dir, f"{batch['camera_index'].item():06d}", f"{batch['frame_index'].item():06d}.exr")
+        os.makedirs(os.path.dirname(depth_path), exist_ok=True)
+        save_image(depth_path, preds[0, 0])
+        return
 
     # Save the ground truth depth map if available
     if depth is not None:
@@ -38,6 +51,8 @@ def save(depth, preds, image, batch, config):
     save_image(join(depths_dir, f'{name}.jpg'), colorize(preds[0, 0].cpu().numpy(), 0, 10))  # ! BATCH = 1
     # Save the raw rgb image
     save_image(join(depths_dir, f'{name}_rgb.jpg'), image)
+    # Save the probability map
+    save_image(join(probas_dir, f'{name}.jpg'), probs[0].cpu().numpy())
 
     # Save the ground truth point cloud if available
     if depth is not None:
@@ -50,6 +65,7 @@ def save(depth, preds, image, batch, config):
     export_pts(to_numpy(pxyz.permute(1, 2, 0).reshape(-1, 3)),
                to_numpy(image[0].permute(1, 2, 0).reshape(-1, 3)),
                filename=join(points_dir, f'{name}.ply'))
+    return
 
 
 @torch.no_grad()
@@ -62,15 +78,16 @@ def visualize(model, test_loader, config):
         # Forward pass
         torch.cuda.synchronize()
         s = time.time()
-        preds = model(image, dataset=batch['dataset'][0])['metric_depth']  # (B, 1, H, W)
+        output = model(image, dataset=batch['dataset'][0], return_probs=True)  # (B, 1, H, W)
         # Interpolate the predicted depth to the original size
-        preds = F.interpolate(preds, (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        output['metric_depth'] = F.interpolate(output['metric_depth'], (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        output['probs'] = F.interpolate(output['probs'], (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, N, H, W)
         torch.cuda.synchronize()
         e = time.time()
         print(f"Network time for processing a image of size {batch['H'][0].item()} x {batch['W'][0].item()} is {e-s}")
 
         # Save image and predicted depth for visualization
-        save(None, preds, image, batch, config)
+        save(None, output, image, batch, config)
 
     return None
 
@@ -93,18 +110,19 @@ def evaluate(model, test_loader, config, round_vals=True, round_precision=3):
         # Forward pass
         torch.cuda.synchronize()
         s = time.time()
-        preds = model(image, dataset=batch['dataset'][0])['metric_depth']  # (B, 1, Hn, Wn)
+        output = model(image, dataset=batch['dataset'][0], return_probs=True)  # (B, 1, H, W)
         # Interpolate the predicted depth to the original size
-        preds = F.interpolate(preds, (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        output['metric_depth'] = F.interpolate(output['metric_depth'], (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, 1, H, W)
+        output['probs'] = F.interpolate(output['probs'], (batch['H'][0].item(), batch['W'][0].item()), mode='bilinear', align_corners=False)  # (B, N, H, W)
         torch.cuda.synchronize()
         e = time.time()
         print(f"Network time for processing a image of size {batch['H'][0].item()} x {batch['W'][0].item()} is {e-s}")
 
         # Save image, ground truth depth, and predicted depth for visualization
-        save(depth, preds, image, batch, config)
+        save(depth, output, image, batch, config)
 
         # Compute the metrics for this batch
-        metrics.update(compute_metrics(depth, preds, config=config))
+        metrics.update(compute_metrics(depth, output['metric_depth'], config=config))
 
     # Round the metrics if required
     r = lambda m: round(m, round_precision) if round_vals else m
